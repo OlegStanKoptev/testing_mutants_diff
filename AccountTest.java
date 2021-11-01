@@ -61,12 +61,40 @@ class AccountTest {
     }
 
     @Test
-    void withdrawMoreThanBalanceAndMaxCredit() {
+    void withdrawMoreThanBalanceAndMaxCreditAndOne() {
         int balance = account.getBalance();
-        assertFalse(account.withdraw(account.getBalance() + account.getMaxCredit()),
+        assertFalse(account.withdraw(account.getBalance() + account.getMaxCredit() + 1),
                 "It should be impossible to withdraw more than the account balance has plus max credit");
         assertEquals(balance, account.getBalance(),
                 "After failed withdraw balance should not change");
+    }
+
+    @Test
+    void withdrawMoreThanBalanceAndMaxCredit() {
+        int balance = account.getBalance();
+        assertTrue(account.withdraw(account.getBalance() + account.getMaxCredit()),
+                "It should be impossible to withdraw more than the account balance has plus max credit");
+        assertEquals(balance - account.getMaxCredit(), account.getBalance(),
+                "After failed withdraw balance should not change");
+    }
+
+    @Test
+    void withdrawZeroMoney() {
+        int balance = account.getBalance();
+        assertTrue(account.withdraw(account.getBalance()),
+                "It should be possible to withdraw zero money");
+        assertEquals(balance, account.getBalance(),
+                "After withdraw balance should not change");
+    }
+
+    @Test
+    void withdrawBoundMoney() {
+        account.deposit(1000000);
+        int balance = account.getBalance();
+        assertTrue(account.withdraw(1000000),
+                "It should be possible to withdraw zero money");
+        assertEquals(balance - 1000000, account.getBalance(),
+                "After withdraw balance should not change");
     }
 
     @Test
@@ -109,7 +137,27 @@ class AccountTest {
     }
 
     @Test
-    void successfulUnblock() {
+    void setMaxCreditEqualsToBound() {
+        account.block();
+        int newMaxCredit = 1000000;
+        assertTrue(account.setMaxCredit(newMaxCredit),
+                "Set max credit should return true on blocked account");
+        assertEquals(newMaxCredit, account.getMaxCredit(),
+                "Max credit should have the value of what was given to setMaxCredit method");
+    }
+
+    @Test
+    void setMaxCreditEqualsToMinusBound() {
+        account.block();
+        int newMaxCredit = -1000000;
+        assertTrue(account.setMaxCredit(newMaxCredit),
+                "Set max credit should return true on blocked account");
+        assertEquals(newMaxCredit, account.getMaxCredit(),
+                "Max credit should have the value of what was given to setMaxCredit method");
+    }
+
+    @Test
+    void unblockSuccessful() {
         account.block();
         assertTrue(account.getBalance() >= -account.getMaxCredit(),
                 "Account balance should not be less than negative max credit");
@@ -120,8 +168,34 @@ class AccountTest {
     }
 
     @Test
+    void unblockSuccessfulWithMaxCreditMoney() {
+        account.withdraw(account.getMaxCredit());
+        account.block();
+        assertTrue(account.getBalance() >= -account.getMaxCredit(),
+                "Account balance should not be less than negative max credit");
+        assertTrue(account.unblock(),
+                "Unblock should return true if balance is not less than the max credit");
+        assertFalse(account.isBlocked(),
+                "Account should be unblocked");
+    }
+
+    @Test
+    void unblockWithBalanceLessThanMaxCreditMoney() {
+        account.setMaxCredit(100);
+        account.withdraw(50);
+        account.block();
+        account.setMaxCredit(1);
+        assertTrue(account.getBalance() < -account.getMaxCredit(),
+                "Account balance should not be more than negative max credit");
+        assertFalse(account.unblock(),
+                "Unblock should return false if balance is not less than the max credit");
+        assertTrue(account.isBlocked(),
+                "Account should be blocked");
+    }
+
+    @Test
     @Disabled("Unable get account balance to be lower than maxCredit in order for unblock to fail")
-    void failedUnblock() {
+    void unblockFail() {
         account.withdraw(account.getBalance() + account.getMaxCredit());
         account.block();
         assertTrue(account.getBalance() < -account.getMaxCredit(),
@@ -151,11 +225,38 @@ class AccountTest {
     }
 
     @Test
-    void depositWithTooBigArgument() {
+    void depositTooMuchMoney() {
         int balance = account.getBalance();
         assertFalse(account.deposit(1000001),
                 "Deposit should return false with argument bigger than the bound");
         assertEquals(balance, account.getBalance(),
+                "Balance should not change after failed deposit call");
+    }
+
+    @Test
+    void depositZeroMoney() {
+        int balance = account.getBalance();
+        assertTrue(account.deposit(0),
+                "Deposit should return true with argument equals to zero");
+        assertEquals(balance, account.getBalance(),
+                "Balance should not change after failed deposit call");
+    }
+
+    @Test
+    void depositNegativeMoney() {
+        int balance = account.getBalance();
+        assertFalse(account.deposit(-100),
+                "Deposit should return false with argument equals to zero");
+        assertEquals(balance, account.getBalance(),
+                "Balance should not change after failed deposit call");
+    }
+
+    @Test
+    void depositBoundMoney() {
+        int balance = account.getBalance();
+        assertTrue(account.deposit(1000000),
+                "Deposit should return true with argument equals to the bound");
+        assertEquals(balance + 1000000, account.getBalance(),
                 "Balance should not change after failed deposit call");
     }
 
